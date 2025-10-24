@@ -42,17 +42,13 @@
     </ul>
 
     <div class="tip">
-      🔧 <b>要修改的地方：</b><br>
-      1) LIFF ID 在下面程式碼的 <span class="mono">// TODO: YOUR_LIFF_ID</span><br>
-      2) C3 網址在 <span class="mono">// TODO: C3_GAME_URL</span>（預設用同網域的 /game-c3/）
-    </div>
-
-    <div class="tip">
-      若你在一般瀏覽器直接打開測試（非 LINE 內），也會寫入 <span class="mono">localStorage</span> 並進行跳轉，方便開發。
+      🔧 目前設定：從 <span class="mono">/tran/</span> 跳轉到 <span class="mono">/tryline/</span><br>
+      如需修改遊戲路徑，請改下方程式碼的 <span class="mono">targetUrl</span>。
     </div>
 
     <div class="foot">
-      本頁會在 <span class="mono">localStorage</span> 寫入鍵：<span class="mono">line_name</span>、<span class="mono">line_userId</span>、<span class="mono">line_picture</span>、<span class="mono">from_liff</span>
+      本頁會寫入 <span class="mono">localStorage</span>：<br>
+      <span class="mono">line_name</span>、<span class="mono">line_userId</span>、<span class="mono">line_picture</span>、<span class="mono">from_liff</span>
     </div>
 
     <div style="margin-top:12px">
@@ -62,91 +58,5 @@
 </div>
 
 <script>
-  // ====== 你要改的兩個地方 =======================================
-  const LIFF_ID = "1657147144-vEBXZmp7";                 // TODO: YOUR_LIFF_ID
-  const C3_GAME_URL = "https://onegameonedestiny.github.io/tryline/";      // TODO: C3_GAME_URL（可填完整網址或同網域相對路徑）
-  // ===============================================================
-
-  const s1 = document.querySelector('#s1 .badge');
-  const s2 = document.querySelector('#s2 .badge');
-  const s3 = document.querySelector('#s3 .badge');
-  const s4 = document.querySelector('#s4 .badge');
-  const retryBtn = document.getElementById('retryBtn');
-
-  function setState(el, state){
-    el.className = 'badge ' + state;
-    el.textContent = (state === 'done') ? '✓' : (state === 'fail' ? '!' : el.textContent);
-  }
-
-  async function run() {
-    try {
-      // 1) LIFF 初始化
-      setState(s1, 'doing');
-      await liff.init({ liffId: LIFF_ID });
-      if (!liff.isLoggedIn()) {
-        // 觸發登入後會回到本頁，再繼續流程
-        liff.login({ redirectUri: location.href });
-        return;
-      }
-      setState(s1, 'done');
-
-      // 2) 取得使用者資料
-      setState(s2, 'doing');
-      let name = "訪客";
-      let userId = "Unknown";
-      let picture = "";
-
-      // 若在 LINE 裡就抓 profile；不在 LINE 也允許用訪客身分（方便開發測試）
-      if (liff.isInClient() || liff.isLoggedIn()) {
-        try {
-          const profile = await liff.getProfile();
-          name = profile.displayName || name;
-          userId = profile.userId || userId;
-          picture = profile.pictureUrl || "";
-        } catch(e) {
-          // 忽略錯誤，走訪客流程
-        }
-      }
-      setState(s2, 'done');
-
-      // 3) 寫入 localStorage
-      setState(s3, 'doing');
-      localStorage.setItem("line_name", name);
-      localStorage.setItem("line_userId", userId);
-      localStorage.setItem("line_picture", picture);
-      localStorage.setItem("from_liff", "true");
-      setState(s3, 'done');
-
-      // 4) 跳轉到 C3
-      setState(s4, 'doing');
-
-      // 在 LINE 裡盡量留在 WebView（external:false），否則用一般跳轉
-      const targetUrl = new URL(C3_GAME_URL, location.origin).toString();
-
-      if (typeof liff.openWindow === 'function' && (liff.isInClient())) {
-        try {
-          liff.openWindow({ url: targetUrl, external: false }); // 留在 LINE WebView
-        } catch {
-          window.location.href = targetUrl; // 後備
-        }
-      } else {
-        window.location.href = targetUrl; // 瀏覽器測試
-      }
-
-      setState(s4, 'done');
-    } catch (err) {
-      console.error(err);
-      setState(s1, 'fail'); // 多半是 LIFF ID、白名單或網路造成
-      retryBtn.classList.remove('hide');
-    }
-  }
-
-  retryBtn.addEventListener('click', () => {
-    location.reload();
-  });
-
-  // 自動執行
-  run();
-</script>
-</body>
-</html>
+  // ====== 你要改的地方 =======================================
+  co
