@@ -1,8 +1,66 @@
-<script>
-  const LIFF_ID = "1657147144-vEBXZmp7";
-  const targetUrl = "/tryline/";
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>LIFF 入口：初始化 → 存資料 → 跳轉 C3</title>
+  <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+  <style>
+    :root { --bg:#0f172a; --card:#111827; --ok:#22c55e; --warn:#f59e0b; --err:#ef4444; --muted:#94a3b8; --text:#e5e7eb; }
+    html,body { margin:0; background:var(--bg); color:var(--text); font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto; }
+    .wrap { max-width:700px; margin:0 auto; padding:24px; }
+    .card { background:var(--card); border-radius:16px; padding:20px; box-shadow:0 8px 24px rgba(0,0,0,.25); }
+    h1 { margin:0 0 12px; font-size:24px; }
+    .steps { list-style:none; padding:0; margin:16px 0; }
+    .steps li { display:flex; align-items:flex-start; gap:10px; padding:10px 0; border-bottom:1px solid rgba(255,255,255,.06); }
+    .steps li:last-child { border-bottom:0; }
+    .badge { width:22px; height:22px; border-radius:50%; display:inline-grid; place-items:center; font-size:12px; }
+    .idle { background:#1f2937; color:var(--muted); }
+    .doing { background:var(--warn); color:#111; animation:pulse 1s infinite ease-in-out; }
+    .done { background:var(--ok); color:#111; }
+    .fail { background:var(--err); color:#111; }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace; color:#93c5fd; }
+    .tip { color:var(--muted); font-size:14px; margin-top:12px; }
+    .hide { display:none; }
+    @keyframes pulse { 0%{opacity:1} 50%{opacity:.55} 100%{opacity:1} }
+    .foot { margin-top:18px; font-size:12px; color:#9ca3af; }
+    button { background:#334155; color:#e5e7eb; border:0; padding:8px 12px; border-radius:10px; cursor:pointer; }
+    button:hover { filter:brightness(1.1); }
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <div class="card">
+    <h1>LIFF 入口流程</h1>
+    <div>這個頁面會：初始化 LIFF → 取得使用者 → 寫入 <span class="mono">localStorage</span> → 跳轉到 C3 遊戲。</div>
 
-  console.log("🚀 啟動入口頁腳本...");
+    <ul class="steps">
+      <li id="s1"><span class="badge idle">1</span> LIFF 初始化</li>
+      <li id="s2"><span class="badge idle">2</span> 取得使用者資料（暱稱 / userId）</li>
+      <li id="s3"><span class="badge idle">3</span> 寫入 <span class="mono">localStorage</span></li>
+      <li id="s4"><span class="badge idle">4</span> 跳轉到 C3 網頁</li>
+    </ul>
+
+    <div class="tip">
+      🔧 目前設定：從 <span class="mono">/tran/</span> 跳轉到 <span class="mono">/tryline/</span><br>
+      如果要改遊戲路徑，可修改下方 <span class="mono">targetUrl</span>。
+    </div>
+
+    <div class="foot">
+      本頁會寫入 <span class="mono">localStorage</span>：<br>
+      <span class="mono">line_name</span>、<span class="mono">line_userId</span>、<span class="mono">line_picture</span>、<span class="mono">from_liff</span>
+    </div>
+
+    <div style="margin-top:12px">
+      <button id="retryBtn" class="hide">重試</button>
+    </div>
+  </div>
+</div>
+
+<script>
+window.addEventListener("DOMContentLoaded", async () => {
+  const LIFF_ID = "1657147144-vEBXZmp7";   // 你的 LIFF ID
+  const targetUrl = "/tryline/";            // 同層級跳轉的目標遊戲資料夾
 
   const s1 = document.querySelector('#s1 .badge');
   const s2 = document.querySelector('#s2 .badge');
@@ -13,70 +71,63 @@
   function setState(el, state){
     el.className = 'badge ' + state;
     el.textContent = (state === 'done') ? '✓' : (state === 'fail' ? '!' : el.textContent);
-    console.log("▶️ 狀態變更:", el.parentElement.textContent.trim(), "→", state);
-  }
-
-  async function run() {
-    console.log("⚙️ 開始 run()");
-
-    try {
-      // 初始化 LIFF
-      setState(s1, 'doing');
-      console.log("⌛ 初始化 LIFF...");
-      await liff.init({ liffId: LIFF_ID });
-      console.log("✅ LIFF init 完成");
-
-      if (!liff.isLoggedIn()) {
-        console.log("🔑 未登入，開始登入");
-        liff.login({ redirectUri: location.href });
-        return;
-      }
-      setState(s1, 'done');
-
-      // 取得使用者資料
-      setState(s2, 'doing');
-      console.log("📡 取得使用者資料中...");
-      let name = "訪客";
-      let userId = "Unknown";
-      let picture = "";
-
-      try {
-        const profile = await liff.getProfile();
-        name = profile.displayName || name;
-        userId = profile.userId || userId;
-        picture = profile.pictureUrl || "";
-        console.log("✅ 取得 profile:", name, userId);
-      } catch (e) {
-        console.warn("⚠️ getProfile 失敗，使用訪客模式");
-      }
-      setState(s2, 'done');
-
-      // 寫入 localStorage
-      setState(s3, 'doing');
-      console.log("💾 寫入 localStorage...");
-      localStorage.setItem("line_name", name);
-      localStorage.setItem("line_userId", userId);
-      localStorage.setItem("line_picture", picture);
-      localStorage.setItem("from_liff", "true");
-      setState(s3, 'done');
-
-      // 跳轉
-      setState(s4, 'doing');
-      console.log("🌐 準備跳轉 →", targetUrl);
-      try {
-        liff.openWindow({ url: targetUrl, external: false });
-      } catch {
-        window.location.href = targetUrl;
-      }
-      setState(s4, 'done');
-
-    } catch (err) {
-      console.error("❌ 發生錯誤：", err);
-      setState(s1, 'fail');
-      retryBtn.classList.remove('hide');
-    }
+    console.log("狀態變更:", el.parentElement.textContent.trim(), "→", state);
   }
 
   retryBtn.addEventListener('click', () => location.reload());
-  run();
+
+  console.log("🚀 啟動 LIFF 初始化流程");
+  try {
+    // 1️⃣ 初始化 LIFF
+    setState(s1, 'doing');
+    await liff.init({ liffId: LIFF_ID });
+    if (!liff.isLoggedIn()) {
+      console.log("未登入，開始登入");
+      liff.login({ redirectUri: location.href });
+      return;
+    }
+    setState(s1, 'done');
+
+    // 2️⃣ 取得使用者資料
+    setState(s2, 'doing');
+    let name = "訪客";
+    let userId = "Unknown";
+    let picture = "";
+    try {
+      const profile = await liff.getProfile();
+      name = profile.displayName || name;
+      userId = profile.userId || userId;
+      picture = profile.pictureUrl || "";
+      console.log("✅ 取得使用者資料：", name, userId);
+    } catch(e) {
+      console.warn("⚠️ getProfile 失敗，使用訪客模式");
+    }
+    setState(s2, 'done');
+
+    // 3️⃣ 寫入 localStorage
+    setState(s3, 'doing');
+    localStorage.setItem("line_name", name);
+    localStorage.setItem("line_userId", userId);
+    localStorage.setItem("line_picture", picture);
+    localStorage.setItem("from_liff", "true");
+    console.log("💾 已寫入 localStorage");
+    setState(s3, 'done');
+
+    // 4️⃣ 跳轉至 /tryline/
+    setState(s4, 'doing');
+    console.log("🌐 跳轉至", targetUrl);
+    try {
+      liff.openWindow({ url: targetUrl, external: false });
+    } catch {
+      window.location.href = targetUrl;
+    }
+    setState(s4, 'done');
+  } catch (err) {
+    console.error("❌ 錯誤：", err);
+    setState(s1, 'fail');
+    retryBtn.classList.remove('hide');
+  }
+});
 </script>
+</body>
+</html>
